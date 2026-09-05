@@ -52,12 +52,13 @@ export default function App() {
     }
 
     const savedUserStr = localStorage.getItem('manim_ai_user');
+    let initialUser: AuthUser | null = null;
     if (savedUserStr) {
       try {
-        const savedUser: AuthUser = JSON.parse(savedUserStr);
-        setUser(savedUser);
-        if (savedUser.token) {
-          fetchCurrentUser(savedUser.token).then((fresh) => {
+        initialUser = JSON.parse(savedUserStr);
+        setUser(initialUser);
+        if (initialUser?.token) {
+          fetchCurrentUser(initialUser.token).then((fresh) => {
             if (fresh) setUser(fresh);
           });
         }
@@ -79,7 +80,7 @@ export default function App() {
         } catch (e) {}
       }
 
-      const convList = await fetchConversations();
+      const convList = await fetchConversations(initialUser?.id);
       setConversations(convList);
 
       if (convList.length > 0) {
@@ -132,6 +133,11 @@ export default function App() {
     localStorage.removeItem('manim_ai_user');
     const convList = await fetchConversations();
     setConversations(convList);
+    if (convList.length > 0) {
+      loadConversation(convList[0].id);
+    } else {
+      handleNewConversation();
+    }
   };
 
   const handleRequireAuth = (promptText?: string) => {

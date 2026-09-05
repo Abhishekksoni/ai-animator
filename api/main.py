@@ -289,7 +289,11 @@ async def list_conversations(
         .order_by(desc(Conversation.updated_at))
     )
     if user_id:
+        # Authenticated user: show their own private conversations + global sample chats
         stmt = stmt.where((Conversation.user_id == user_id) | (Conversation.user_id == None))
+    else:
+        # Logged-out / Anonymous: ONLY show default global sample chats
+        stmt = stmt.where(Conversation.user_id == None)
 
     result = await db.execute(stmt)
     conversations = result.scalars().all()
