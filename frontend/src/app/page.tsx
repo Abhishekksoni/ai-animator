@@ -1,0 +1,395 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
+import {
+  ConversationSummary, ConversationDetail, ModelOption,
+  Scene, PipelineProgressEvent, AuthUser
+} from '../types';
+import {
+  fetchModels, fetchConversations, createConversation,
+  fetchConversation, deleteConversation, sendMessage, createWebSocket,
+  fetchCurrentUser
+} from '../lib/api';
+import { Header } from '../components/Header';
+import { Sidebar } from '../components/Sidebar';
+import { ChatPanel } from '../components/ChatPanel';
+import { CanvasArtifact } from '../components/CanvasArtifact';
+import { ApiKeyModal } from '../components/ApiKeyModal';
+import { GoogleAuthModal } from '../components/GoogleAuthModal';
+
+export default function App() {
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-3.7-flash');
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeConversation, setActiveConversation] = useState<ConversationDetail | null>(null);
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+
+  // Claude Artifact / Canvas open state
+  const [isArtifactOpen, setIsArtifactOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [progressEvent, setProgressEvent] = useState<PipelineProgressEvent | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState<boolean>(false);
+
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Load user session, theme and preferences on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('manim_ai_theme') as 'dark' | 'light' | null;
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+
+    const savedUserStr = localStorage.getItem('manim_ai_user');
+    if (savedUserStr) {
+      try {
+        const savedUser: AuthUser = JSON.parse(savedUserStr);
+        setUser(savedUser);
+        if (savedUser.token) {
+          fetchCurrentUser(savedUser.token).then((fresh) => {
+            if (fresh) setUser(fresh);
+          });
+        }
+      } catch (e) {}
+    }
+
+    async function init() {
+      const modelList = await fetchModels();
+      setModels(modelList);
+      if (modelList.length > 0) {
+        const savedModel = localStorage.getItem('manim_ai_model');
+        if (savedModel && modelList.some((m) => m.id === savedModel)) {
+          setSelectedModelId(savedModel);
+        } else {
+          setSelectedModelId(modelList[0].id);
+        }
+      }
+
+      const savedKeys = localStorage.getItem('manim_ai_keys');
+      if (savedKeys) {
+        try {
+          setApiKeys(JSON.parse(savedKeys));
+        } catch (e) {}
+      }
+
+      const convList = await fetchConversations();
+      setConversations(convList);
+
+      if (convList.length > 0) {
+        loadConversation(convList[0].id);
+      } else {
+        handleNewConversation();
+      }
+    }
+    init();
+  }, []);
+
+  // Reload user-scoped conversations when user state changes
+  useEffect(() => {
+    if (user?.id) {
+      fetchConversations(user.id).then((convList) => {
+        setConversations(convList);
+      });
+    }
+  }, [user?.id]);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('manim_ai_theme', nextTheme);
+    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  };
+
+  const handleAuthSuccess = async (authUser: AuthUser) => {
+    setUser(authUser);
+    localStorage.setItem('manim_ai_user', JSON.stringify(authUser));
+    try {
+      confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+    } catch (e) {}
+
+    const convList = await fetchConversations(authUser.id);
+    setConversations(convList);
+
+    // If user was trying to send a prompt before logging in, auto-dispatch it
+    if (pendingPrompt) {
+      const promptToRun = pendingPrompt;
+      setPendingPrompt(null);
+      setTimeout(() => {
+        handleSendMessage(promptToRun, authUser.id);
+      }, 300);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setUser(null);
+    localStorage.removeItem('manim_ai_user');
+    const convList = await fetchConversations();
+    setConversations(convList);
+  };
+
+  const handleRequireAuth = (promptText?: string) => {
+    if (promptText) {
+      setPendingPrompt(promptText);
+    }
+    setIsAuthModalOpen(true);
+  };
+
+  // Subscribe to WebSocket for active conversation
+  useEffect(() => {
+    if (!activeConversation?.id) return;
+
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
+    const ws = createWebSocket(activeConversation.id, (data: PipelineProgressEvent) => {
+      setProgressEvent(data);
+      if (data.event === 'succeeded') {
+        setIsArtifactOpen(true);
+        try {
+          confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+        } catch (e) {}
+      }
+    });
+
+    wsRef.current = ws;
+
+    return () => {
+      ws.close();
+    };
+  }, [activeConversation?.id]);
+
+  const loadConversation = async (id: string) => {
+    try {
+      const detail = await fetchConversation(id);
+      setActiveConversation(detail);
+      
+      if (detail.scenes && detail.scenes.length > 0) {
+        const successful = detail.scenes.filter((s) => s.status === 'succeeded' && s.video_url);
+        if (successful.length > 0) {
+          setSelectedSceneId(successful[successful.length - 1].id);
+          setIsArtifactOpen(true);
+        } else {
+          setSelectedSceneId(detail.scenes[detail.scenes.length - 1].id);
+        }
+      } else {
+        setSelectedSceneId(null);
+        setIsArtifactOpen(false);
+      }
+      setProgressEvent(null);
+    } catch (e) {
+      console.error('Failed to load conversation:', e);
+    }
+  };
+
+  const handleNewConversation = async () => {
+    try {
+      const newConv = await createConversation('New Animation', user?.id);
+      const updatedList = await fetchConversations(user?.id);
+      setConversations(updatedList);
+      setIsArtifactOpen(false);
+      await loadConversation(newConv.id);
+    } catch (e) {
+      console.error('Failed to create new conversation:', e);
+    }
+  };
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteConversation(id);
+      const updatedList = await fetchConversations(user?.id);
+      setConversations(updatedList);
+      if (activeConversation?.id === id) {
+        if (updatedList.length > 0) {
+          loadConversation(updatedList[0].id);
+        } else {
+          handleNewConversation();
+        }
+      }
+    } catch (e) {
+      console.error('Failed to delete conversation:', e);
+    }
+  };
+
+  const handleSendMessage = async (content: string, explicitUserId?: string) => {
+    if (!activeConversation) return;
+
+    // Generation gating: must be logged in
+    const activeUserId = explicitUserId || user?.id;
+    if (!activeUserId) {
+      handleRequireAuth(content);
+      return;
+    }
+
+    setIsLoading(true);
+    setProgressEvent({ event: 'generating_code', message: 'Starting animation generation...' });
+
+    const selectedModel = models.find((m) => m.id === selectedModelId);
+    const providerName = selectedModel?.provider || 'gemini';
+    const activeKey = apiKeys[providerName];
+
+    try {
+      const response = await sendMessage(
+        activeConversation.id,
+        content,
+        providerName,
+        selectedModelId,
+        activeKey,
+        activeUserId
+      );
+
+      // Refresh conversation
+      const detail = await fetchConversation(activeConversation.id);
+      setActiveConversation(detail);
+      
+      if (response.scene) {
+        setSelectedSceneId(response.scene.id);
+        if (response.scene.status === 'succeeded') {
+          setIsArtifactOpen(true);
+        }
+      } else if (detail.scenes && detail.scenes.length > 0) {
+        setSelectedSceneId(detail.scenes[detail.scenes.length - 1].id);
+      }
+
+      // Update sidebar summaries
+      const convList = await fetchConversations(activeUserId);
+      setConversations(convList);
+    } catch (err: any) {
+      console.error('Failed to send message:', err);
+      setProgressEvent({
+        event: 'failed',
+        error: err.message || 'Failed to render animation'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveKeys = (keys: Record<string, string>) => {
+    setApiKeys(keys);
+    localStorage.setItem('manim_ai_keys', JSON.stringify(keys));
+  };
+
+  const handleSelectModel = (modelId: string) => {
+    setSelectedModelId(modelId);
+    localStorage.setItem('manim_ai_model', modelId);
+  };
+
+  const activeScene: Scene | null =
+    (selectedSceneId && activeConversation?.scenes?.find((s) => s.id === selectedSceneId)) ||
+    (activeConversation?.scenes?.filter((s) => s.status === 'succeeded' && s.video_url).pop()) ||
+    (activeConversation?.scenes && activeConversation.scenes.length > 0
+      ? activeConversation.scenes[activeConversation.scenes.length - 1]
+      : null);
+
+  const hasAnyArtifact = Boolean(activeConversation?.scenes && activeConversation.scenes.length > 0);
+  const isDark = theme === 'dark';
+
+  return (
+    <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${
+      isDark ? 'bg-[#0d0d0f] text-zinc-100' : 'bg-[#fbfbfa] text-stone-900'
+    }`}>
+      {/* Claude / ChatGPT Top Header */}
+      <Header
+        models={models}
+        selectedModel={selectedModelId}
+        onSelectModel={handleSelectModel}
+        onNewConversation={handleNewConversation}
+        onOpenKeys={() => setIsKeyModalOpen(true)}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        title={activeConversation?.title || 'New Animation'}
+        isSidebarOpen={isSidebarOpen}
+        hasArtifact={hasAnyArtifact}
+        isArtifactOpen={isArtifactOpen}
+        onToggleArtifact={() => setIsArtifactOpen(!isArtifactOpen)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        user={user}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onSignOut={handleSignOut}
+      />
+
+      {/* Main Workspace Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          conversations={conversations}
+          activeId={activeConversation?.id || null}
+          onSelect={loadConversation}
+          onDelete={handleDeleteConversation}
+          onNew={handleNewConversation}
+          theme={theme}
+        />
+
+        {/* Dynamic Split Layout: Chat & Claude Canvas */}
+        <main className="flex-1 flex overflow-hidden">
+          {/* Chat Panel */}
+          <div className="h-full overflow-hidden transition-all duration-300 flex-1">
+            <ChatPanel
+              messages={activeConversation?.messages || []}
+              scenes={activeConversation?.scenes || []}
+              isLoading={isLoading}
+              progressEvent={progressEvent}
+              onSendMessage={handleSendMessage}
+              onOpenArtifact={(sceneId) => {
+                if (sceneId) setSelectedSceneId(sceneId);
+                setIsArtifactOpen(true);
+              }}
+              activeSceneId={selectedSceneId}
+              theme={theme}
+              user={user}
+              onRequireAuth={handleRequireAuth}
+            />
+          </div>
+
+          {/* Right Canvas / Artifact Pane (Side-by-side like Claude Artifacts) */}
+          {isArtifactOpen && (
+            <div className="w-full lg:w-[50%] xl:w-[48%] h-full animate-in slide-in-from-right duration-300">
+              <CanvasArtifact
+                scene={activeScene}
+                allScenes={activeConversation?.scenes || []}
+                selectedSceneId={selectedSceneId}
+                onSelectScene={(id) => setSelectedSceneId(id)}
+                onClose={() => setIsArtifactOpen(false)}
+                theme={theme}
+              />
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* API Key Settings Modal */}
+      <ApiKeyModal
+        isOpen={isKeyModalOpen}
+        onClose={() => setIsKeyModalOpen(false)}
+        onSave={handleSaveKeys}
+        initialKeys={apiKeys}
+        theme={theme}
+      />
+
+      {/* Google OAuth Login Modal */}
+      <GoogleAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingPrompt(null);
+        }}
+        onSuccess={handleAuthSuccess}
+        theme={theme}
+        pendingPrompt={pendingPrompt}
+      />
+    </div>
+  );
+}

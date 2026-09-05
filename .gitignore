@@ -1,0 +1,18 @@
+# Python & Backend
+venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+storage/
+*.sqlite3
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env*.local
+
+# OS / Misc
+.DS_Store
