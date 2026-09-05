@@ -65,6 +65,7 @@ class ConversationSummary(BaseModel):
     updated_at: datetime
     scene_count: int = 0
     latest_video_url: Optional[str] = None
+    is_sample: bool = False
 
 class ConversationDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -73,6 +74,7 @@ class ConversationDetail(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+    is_sample: bool = False
     messages: List[MessageResponse] = []
     scenes: List[SceneResponse] = []
 

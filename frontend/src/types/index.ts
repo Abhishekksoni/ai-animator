@@ -38,6 +38,7 @@ export interface ConversationSummary {
   updated_at: string;
   scene_count: number;
   latest_video_url?: string | null;
+  is_sample?: boolean;
 }
 
 export interface ConversationDetail {
@@ -45,6 +46,7 @@ export interface ConversationDetail {
   title: string;
   created_at: string;
   updated_at: string;
+  is_sample?: boolean;
   messages: Message[];
   scenes: Scene[];
 }

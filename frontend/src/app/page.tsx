@@ -233,6 +233,10 @@ export default function App() {
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const targetConv = conversations.find((c) => c.id === id);
+    if (targetConv?.is_sample) {
+      return; // Showcase sample animations are permanent and protected
+    }
     try {
       delete convCacheRef.current[id];
       setConversations((prev) => prev.filter((c) => c.id !== id));

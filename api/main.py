@@ -18,7 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 
-from db.session import init_db, get_db
+from db.session import init_db, get_db, AsyncSessionLocal
+from db.seeder import seed_sample_animations
 from models.models import Conversation, Message, Scene, RenderJob, User
 from models.schemas import (
     ConversationCreate, ConversationSummary, ConversationDetail,
@@ -42,7 +43,9 @@ MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
-    logger.info("Database initialized and media directory mounted.")
+    async with AsyncSessionLocal() as session:
+        await seed_sample_animations(session)
+    logger.info("Database initialized, sample animations seeded, and media directory mounted.")
     yield
     # Shutdown
 
@@ -313,7 +316,8 @@ async def list_conversations(
                 created_at=c.created_at,
                 updated_at=c.updated_at,
                 scene_count=len(c.scenes) if c.scenes else 0,
-                latest_video_url=latest_video
+                latest_video_url=latest_video,
+                is_sample=(c.user_id is None)
             )
         )
     return summaries
@@ -332,6 +336,7 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
     conv = result.scalar_one_or_none()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    conv.is_sample = (conv.user_id is None)
     return conv
 
 @app.delete("/api/conversations/{conversation_id}")
@@ -341,6 +346,8 @@ async def delete_conversation(conversation_id: str, db: AsyncSession = Depends(g
     conv = result.scalar_one_or_none()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.user_id is None:
+        raise HTTPException(status_code=403, detail="Cannot delete showcase sample conversations")
     await db.delete(conv)
     await db.commit()
     return {"success": True, "message": "Conversation deleted"}
