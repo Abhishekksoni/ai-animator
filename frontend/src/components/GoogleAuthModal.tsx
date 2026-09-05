@@ -69,6 +69,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
       if (googleBtnRef.current) {
         googleBtnRef.current.innerHTML = '';
+        const btnWidth = typeof window !== 'undefined' ? Math.min(320, window.innerWidth - 64) : 300;
         google.accounts.id.renderButton(googleBtnRef.current, {
           type: 'standard',
           theme: isDark ? 'filled_black' : 'outline',
@@ -76,7 +77,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           text: 'continue_with',
           shape: 'pill',
           logo_alignment: 'left',
-          width: 340,
+          width: btnWidth,
         });
       }
 
@@ -117,8 +118,8 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-md rounded-3xl border p-6 shadow-2xl transition-all ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className={`relative w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar rounded-3xl border p-5 sm:p-6 shadow-2xl transition-all ${
         isDark
           ? 'border-[#2e2e33] bg-[#17171a] text-zinc-100 claude-shadow'
           : 'border-[#e6e4dc] bg-white text-stone-900 shadow-2xl'

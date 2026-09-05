@@ -38,8 +38,8 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-lg rounded-2xl border p-6 shadow-2xl transition-all ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className={`relative w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl border p-4 sm:p-6 shadow-2xl transition-all ${
         isDark
           ? 'border-[#2e2e33] bg-[#17171a] text-zinc-100 claude-shadow'
           : 'border-[#e6e4dc] bg-white text-stone-900 shadow-2xl'

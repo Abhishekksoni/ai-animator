@@ -43,6 +43,11 @@ export default function App() {
 
   // Load user session, theme and preferences on mount
   useEffect(() => {
+    // Responsive sidebar initial state
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+
     const savedTheme = localStorage.getItem('manim_ai_theme') as 'dark' | 'light' | null;
     if (savedTheme === 'light' || savedTheme === 'dark') {
       setTheme(savedTheme);
@@ -193,6 +198,9 @@ export default function App() {
   }, [activeConversation?.id]);
 
   const loadConversation = async (id: string) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
     // 1. Instant Cache hit (0ms UI latency)
     if (convCacheRef.current[id]) {
       syncConversationState(convCacheRef.current[id]);
@@ -364,13 +372,19 @@ export default function App() {
           onSelect={loadConversation}
           onDelete={handleDeleteConversation}
           onNew={handleNewConversation}
+          onClose={() => setIsSidebarOpen(false)}
+          models={models}
+          selectedModel={selectedModelId}
+          onSelectModel={handleSelectModel}
           theme={theme}
         />
 
         {/* Dynamic Split Layout: Chat & Claude Canvas */}
-        <main className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex overflow-hidden relative">
           {/* Chat Panel */}
-          <div className="h-full overflow-hidden transition-all duration-300 flex-1">
+          <div className={`h-full overflow-hidden transition-all duration-300 flex-1 ${
+            isArtifactOpen ? 'hidden lg:block' : 'block'
+          }`}>
             <ChatPanel
               messages={activeConversation?.messages || []}
               scenes={activeConversation?.scenes || []}
@@ -388,9 +402,9 @@ export default function App() {
             />
           </div>
 
-          {/* Right Canvas / Artifact Pane (Side-by-side like Claude Artifacts) */}
+          {/* Right Canvas / Artifact Pane (Side-by-side on desktop, full-screen on mobile) */}
           {isArtifactOpen && (
-            <div className="w-full lg:w-[50%] xl:w-[48%] h-full animate-in slide-in-from-right duration-300">
+            <div className="fixed inset-0 top-13 z-20 w-full h-[calc(100vh-3.25rem)] lg:static lg:top-0 lg:w-[50%] xl:w-[48%] lg:h-full lg:z-auto animate-in slide-in-from-right duration-300">
               <CanvasArtifact
                 scene={activeScene}
                 allScenes={activeConversation?.scenes || []}

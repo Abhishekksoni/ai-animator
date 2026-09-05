@@ -136,16 +136,16 @@ export const CanvasArtifact: React.FC<CanvasArtifactProps> = ({
         : 'bg-[#fbfbfa] border-[#e6e4dc]'
     }`}>
       {/* Claude-style Artifact Top Bar */}
-      <div className={`h-13 px-4 border-b flex items-center justify-between shrink-0 transition-colors duration-200 ${
+      <div className={`h-13 px-3 sm:px-4 border-b flex items-center justify-between shrink-0 transition-colors duration-200 ${
         isDark ? 'bg-[#18181b] border-[#242428]' : 'bg-white border-[#e6e4dc]'
       }`}>
-        <div className="flex items-center gap-2.5">
-          <div className={`flex items-center gap-1.5 rounded-lg p-1 text-xs ${
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className={`flex items-center gap-1 sm:gap-1.5 rounded-lg p-1 text-xs ${
             isDark ? 'bg-[#242428]' : 'bg-[#eceae4]'
           }`}>
             <button
               onClick={() => setActiveTab('video')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md font-medium transition ${
                 activeTab === 'video'
                   ? isDark
                     ? 'bg-[#141416] text-white shadow-xs font-semibold'
@@ -160,7 +160,7 @@ export const CanvasArtifact: React.FC<CanvasArtifactProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('code')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md font-medium transition ${
                 activeTab === 'code'
                   ? isDark
                     ? 'bg-[#141416] text-white shadow-xs font-semibold'
@@ -184,7 +184,7 @@ export const CanvasArtifact: React.FC<CanvasArtifactProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {activeTab === 'code' ? (
             <button
               onClick={handleCopyCode}
@@ -218,14 +218,15 @@ export const CanvasArtifact: React.FC<CanvasArtifactProps> = ({
 
           <button
             onClick={onClose}
-            title="Close canvas"
-            className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${
+            title="Close canvas (back to chat)"
+            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition ${
               isDark
                 ? 'text-zinc-400 hover:bg-[#242428] hover:text-white'
                 : 'text-stone-500 hover:bg-[#edebe5] hover:text-stone-900'
             }`}
           >
             <X className="h-4 w-4" />
+            <span className="lg:hidden text-[11px]">Chat</span>
           </button>
         </div>
       </div>

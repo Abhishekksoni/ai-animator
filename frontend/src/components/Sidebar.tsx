@@ -3,9 +3,9 @@
 import React from 'react';
 import {
   Plus, MessageSquare, Trash2,
-  Film
+  Film, X, ChevronDown, Cpu
 } from 'lucide-react';
-import { ConversationSummary } from '../types';
+import { ConversationSummary, ModelOption } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,6 +14,10 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onDelete: (id: string, e: React.MouseEvent) => void;
   onNew: () => void;
+  onClose?: () => void;
+  models?: ModelOption[];
+  selectedModel?: string;
+  onSelectModel?: (modelId: string) => void;
   theme: 'dark' | 'light';
 }
 
@@ -24,34 +28,107 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelect,
   onDelete,
   onNew,
+  onClose,
+  models,
+  selectedModel,
+  onSelectModel,
   theme,
 }) => {
   if (!isOpen) return null;
   const isDark = theme === 'dark';
 
+  const handleSelectConv = (id: string) => {
+    onSelect(id);
+    if (onClose && typeof window !== 'undefined' && window.innerWidth < 768) {
+      onClose();
+    }
+  };
+
   return (
-    <aside className={`w-64 border-r flex flex-col shrink-0 h-[calc(100vh-3.25rem)] select-none transition-colors duration-200 z-10 ${
-      isDark
-        ? 'border-[#242428] bg-[#111113]'
-        : 'border-[#e6e4dc] bg-[#f5f4f0]'
-    }`}>
-      {/* New Chat Button */}
-      <div className={`p-3 border-b ${isDark ? 'border-[#1f1f23]' : 'border-[#e6e4dc]'}`}>
-        <button
-          onClick={onNew}
-          className={`w-full flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-xs font-medium transition shadow-xs ${
-            isDark
-              ? 'border-[#2e2e33] bg-[#17171a] text-zinc-200 hover:bg-[#202024] hover:text-white hover:border-zinc-600'
-              : 'border-[#dcd9ce] bg-white text-stone-800 hover:bg-[#faf9f6] hover:text-stone-950 hover:border-stone-400'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-[#d97736]" />
-            <span>New Animation</span>
-          </span>
-          <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-stone-400'}`}>⌘N</span>
-        </button>
-      </div>
+    <>
+      {/* Mobile Drawer Backdrop Overlay */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 top-13 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-in fade-in duration-200"
+      />
+
+      <aside className={`fixed top-13 bottom-0 left-0 z-40 w-72 max-w-[85vw] md:relative md:top-0 md:h-[calc(100vh-3.25rem)] md:w-64 border-r flex flex-col shrink-0 select-none transition-colors duration-200 shadow-2xl md:shadow-none animate-in slide-in-from-left duration-200 ${
+        isDark
+          ? 'border-[#242428] bg-[#111113]'
+          : 'border-[#e6e4dc] bg-[#f5f4f0]'
+      }`}>
+        {/* New Chat Button & Mobile Close Button */}
+        <div className={`p-3 border-b flex items-center gap-2 ${isDark ? 'border-[#1f1f23]' : 'border-[#e6e4dc]'}`}>
+          <button
+            onClick={() => {
+              onNew();
+              if (onClose && typeof window !== 'undefined' && window.innerWidth < 768) {
+                onClose();
+              }
+            }}
+            className={`flex-1 flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-xs font-medium transition shadow-xs ${
+              isDark
+                ? 'border-[#2e2e33] bg-[#17171a] text-zinc-200 hover:bg-[#202024] hover:text-white hover:border-zinc-600'
+                : 'border-[#dcd9ce] bg-white text-stone-800 hover:bg-[#faf9f6] hover:text-stone-950 hover:border-stone-400'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Plus className="h-4 w-4 text-[#d97736]" />
+              <span>New Animation</span>
+            </span>
+            <span className={`text-[10px] font-mono hidden md:inline ${isDark ? 'text-zinc-500' : 'text-stone-400'}`}>⌘N</span>
+          </button>
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              title="Close sidebar"
+              className={`md:hidden flex h-9 w-9 items-center justify-center rounded-xl border transition ${
+                isDark
+                  ? 'border-[#2e2e33] bg-[#17171a] text-zinc-400 hover:bg-[#202024] hover:text-white'
+                  : 'border-[#dcd9ce] bg-white text-stone-600 hover:bg-[#faf9f6] hover:text-stone-900 shadow-xs'
+              }`}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Model Selector for Small Screens (Mobile Only) */}
+        {models && models.length > 0 && onSelectModel && (
+          <div className={`p-3 border-b sm:hidden ${isDark ? 'border-[#1f1f23]' : 'border-[#e6e4dc]'}`}>
+            <label className={`block text-[10px] font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 ${
+              isDark ? 'text-zinc-500' : 'text-stone-500'
+            }`}>
+              <Cpu className="h-3 w-3 text-[#d97736]" />
+              <span>AI Model</span>
+            </label>
+            <div className="relative">
+              <select
+                value={selectedModel}
+                onChange={(e) => onSelectModel(e.target.value)}
+                className={`w-full appearance-none rounded-xl border pl-3 pr-8 py-2 text-xs font-medium focus:border-[#d97736] focus:outline-none cursor-pointer transition ${
+                  isDark
+                    ? 'border-[#2e2e33] bg-[#17171a] text-zinc-200'
+                    : 'border-[#dcd9ce] bg-white text-stone-800 shadow-xs'
+                }`}
+              >
+                {models.map((m) => (
+                  <option
+                    key={m.id}
+                    value={m.id}
+                    className={isDark ? 'bg-[#17171a] text-zinc-200' : 'bg-white text-stone-800'}
+                  >
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${
+                isDark ? 'text-zinc-400' : 'text-stone-500'
+              }`} />
+            </div>
+          </div>
+        )}
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-3 custom-scrollbar">
@@ -68,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <div
                   key={c.id}
-                  onClick={() => onSelect(c.id)}
+                  onClick={() => handleSelectConv(c.id)}
                   className={`group relative flex items-center justify-between rounded-xl px-3 py-2.5 cursor-pointer text-xs transition border ${
                     isActive
                       ? isDark
@@ -153,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return (
               <div
                 key={c.id}
-                onClick={() => onSelect(c.id)}
+                onClick={() => handleSelectConv(c.id)}
                 className={`group relative flex items-center justify-between rounded-xl px-3 py-2.5 cursor-pointer text-xs transition border ${
                   isActive
                     ? isDark
@@ -209,5 +286,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <span className="font-mono text-[10px]">v0.19</span>
       </div>
     </aside>
+    </>
   );
 };

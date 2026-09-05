@@ -152,7 +152,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     )}
 
                     <div
-                      className={`rounded-2xl px-4 py-3 max-w-[85%] ${
+                      className={`rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 max-w-[90%] sm:max-w-[82%] ${
                         isUser
                           ? isDark
                             ? 'bg-[#27272a] text-zinc-100'
@@ -162,28 +162,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             : 'text-stone-800 bg-transparent'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                      <p className="whitespace-pre-wrap leading-relaxed text-xs sm:text-sm">{m.content}</p>
 
                       {/* Claude-style Artifact Card inside Assistant Message */}
                       {matchingScene && matchingScene.status === 'succeeded' && (
                         <div
                           onClick={() => onOpenArtifact(matchingScene.id)}
-                          className={`mt-3 cursor-pointer group flex items-center justify-between rounded-xl border p-3 transition-all claude-shadow ${
+                          className={`mt-2.5 sm:mt-3 cursor-pointer group flex items-center justify-between rounded-xl border p-2.5 sm:p-3 transition-all claude-shadow ${
                             isDark
                               ? 'border-[#2e2e33] bg-[#17171a] hover:border-[#d97736]/50 hover:bg-[#1e1e22]'
                               : 'border-[#e6e4dc] bg-white hover:border-[#d97736]/60 hover:bg-[#faf9f6]'
                           }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className={`flex h-9 w-9 items-center justify-center rounded-lg group-hover:scale-105 transition-transform ${
+                          <div className="flex items-center gap-2.5 sm:gap-3 truncate mr-2">
+                            <div className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg group-hover:scale-105 transition-transform ${
                               isDark
                                 ? 'bg-[#d97736]/15 text-[#f59e6c]'
                                 : 'bg-[#d97736]/15 text-[#c26325]'
                             }`}>
                               <Film className="h-4 w-4" />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
+                            <div className="truncate">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
                                 <span className={`text-xs font-semibold ${
                                   isDark
                                     ? 'text-zinc-200 group-hover:text-white'
@@ -199,19 +199,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                   v{matchingScene.version}
                                 </span>
                               </div>
-                              <p className={`text-[11px] ${
+                              <p className={`text-[11px] truncate ${
                                 isDark ? 'text-zinc-400' : 'text-stone-500'
                               }`}>
-                                Click to open interactive player & code canvas
+                                Tap to play video & see code
                               </p>
                             </div>
                           </div>
 
-                          <div className={`flex items-center gap-1.5 text-xs font-medium pr-1 ${
+                          <div className={`flex items-center gap-1 text-xs font-medium shrink-0 ${
                             isDark ? 'text-[#f59e6c]' : 'text-[#c26325]'
                           }`}>
-                            <span>Open Canvas</span>
-                            <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                            <span className="hidden sm:inline">Canvas</span>
+                            <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                           </div>
                         </div>
                       )}
