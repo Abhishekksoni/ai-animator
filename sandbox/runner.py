@@ -39,6 +39,9 @@ class RenderResult:
             "error_trace": self.error_trace
         }
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_MEDIA_DIR = os.getenv("MEDIA_DIR", str(BASE_DIR / "storage" / "media"))
+
 class SandboxedRunner:
     """
     Executes Manim rendering inside an isolated environment (Docker container or local sandbox),
@@ -47,11 +50,11 @@ class SandboxedRunner:
 
     def __init__(
         self,
-        media_output_dir: str = "/Users/abhisheksoni/ai-animator/storage/media",
+        media_output_dir: Optional[str] = None,
         use_docker: bool = False,
         timeout_seconds: int = 90
     ):
-        self.media_output_dir = Path(media_output_dir)
+        self.media_output_dir = Path(media_output_dir or DEFAULT_MEDIA_DIR)
         self.media_output_dir.mkdir(parents=True, exist_ok=True)
         self.use_docker = use_docker
         self.timeout_seconds = timeout_seconds
@@ -96,12 +99,13 @@ class SandboxedRunner:
         quality: str,
         job_id: str
     ) -> RenderResult:
-        venv_bin_dir = "/Users/abhisheksoni/ai-animator/venv/bin"
+        venv_bin_dir = str(BASE_DIR / "venv" / "bin")
         venv_manim = f"{venv_bin_dir}/manim"
-        manim_bin = venv_manim if os.path.exists(venv_manim) else "manim"
+        manim_bin = shutil.which("manim") or (venv_manim if os.path.exists(venv_manim) else "manim")
 
         env = dict(os.environ)
-        env["PATH"] = f"{venv_bin_dir}:{env.get('PATH', '')}"
+        if os.path.exists(venv_bin_dir):
+            env["PATH"] = f"{venv_bin_dir}:{env.get('PATH', '')}"
 
         cmd = [
             manim_bin,
@@ -271,9 +275,9 @@ class SandboxedRunner:
 
     async def _generate_thumbnail(self, video_path: Path, thumbnail_path: Path, env: dict):
         try:
-            ffmpeg_bin = "/Users/abhisheksoni/ai-animator/venv/bin/ffmpeg"
-            if not os.path.exists(ffmpeg_bin):
-                ffmpeg_bin = "ffmpeg"
+            venv_bin_dir = str(BASE_DIR / "venv" / "bin")
+            venv_ffmpeg = f"{venv_bin_dir}/ffmpeg"
+            ffmpeg_bin = shutil.which("ffmpeg") or (venv_ffmpeg if os.path.exists(venv_ffmpeg) else "ffmpeg")
 
             ffmpeg_cmd = [
                 ffmpeg_bin, "-y", "-ss", "00:00:00.5",

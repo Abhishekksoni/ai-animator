@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from models.models import Base
 
 # By default, use local SQLite database with aiosqlite, or postgresql+asyncpg if DATABASE_URL is set
-DB_DIR = Path("/Users/abhisheksoni/ai-animator/storage")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_DIR = Path(os.getenv("STORAGE_DIR", str(BASE_DIR / "storage")))
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_DB_URL = f"sqlite+aiosqlite:///{DB_DIR}/animator.db"
 

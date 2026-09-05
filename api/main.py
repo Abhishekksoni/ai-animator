@@ -34,7 +34,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_animator.api")
 
 # Media storage directory
-MEDIA_DIR = Path("/Users/abhisheksoni/ai-animator/storage/media")
+BASE_DIR = Path(__file__).resolve().parent.parent
+MEDIA_DIR = Path(os.getenv("MEDIA_DIR", str(BASE_DIR / "storage" / "media")))
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
 @asynccontextmanager
