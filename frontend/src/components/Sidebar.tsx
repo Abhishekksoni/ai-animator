@@ -49,10 +49,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Drawer Backdrop Overlay */}
       <div
         onClick={onClose}
-        className="fixed inset-0 top-13 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-in fade-in duration-200"
+        className="fixed inset-0 top-[52px] bg-black/60 backdrop-blur-xs z-30 md:hidden animate-in fade-in duration-200"
       />
 
-      <aside className={`fixed top-13 bottom-0 left-0 z-40 w-72 max-w-[85vw] md:relative md:top-0 md:h-[calc(100vh-3.25rem)] md:w-64 border-r flex flex-col shrink-0 select-none transition-colors duration-200 shadow-2xl md:shadow-none animate-in slide-in-from-left duration-200 ${
+      <aside className={`fixed top-[52px] bottom-0 left-0 z-40 w-72 max-w-[85vw] md:relative md:top-0 md:h-full md:w-64 border-r flex flex-col shrink-0 select-none transition-colors duration-200 shadow-2xl md:shadow-none animate-in slide-in-from-left duration-200 ${
         isDark
           ? 'border-[#242428] bg-[#111113]'
           : 'border-[#e6e4dc] bg-[#f5f4f0]'

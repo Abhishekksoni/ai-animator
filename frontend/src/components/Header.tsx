@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className={`h-13 border-b px-2.5 sm:px-4 flex items-center justify-between shrink-0 z-20 transition-colors duration-200 ${
+    <header className={`h-13 h-[52px] sticky top-0 left-0 right-0 border-b px-2.5 sm:px-4 flex items-center justify-between shrink-0 z-30 transition-colors duration-200 ${
       isDark
         ? 'border-[#242428] bg-[#0d0d0f]'
         : 'border-[#e6e4dc] bg-[#fbfbfa]'

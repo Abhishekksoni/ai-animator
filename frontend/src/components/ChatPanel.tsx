@@ -345,12 +345,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </button>
             </div>
           </form>
-
-          <p className={`text-center text-[10px] mt-2 ${
-            isDark ? 'text-zinc-600' : 'text-stone-400'
-          }`}>
-            AI generated Manim code runs in an isolated sandbox with automated self-correction.
-          </p>
         </div>
       </div>
     </div>

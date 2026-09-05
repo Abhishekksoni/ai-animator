@@ -339,7 +339,7 @@ export default function App() {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${
+    <div className={`fixed inset-0 flex flex-col h-full h-[100dvh] w-full overflow-hidden font-sans transition-colors duration-200 ${
       isDark ? 'bg-[#0d0d0f] text-zinc-100' : 'bg-[#fbfbfa] text-stone-900'
     }`}>
       {/* Claude / ChatGPT Top Header */}
@@ -404,7 +404,7 @@ export default function App() {
 
           {/* Right Canvas / Artifact Pane (Side-by-side on desktop, full-screen on mobile) */}
           {isArtifactOpen && (
-            <div className="fixed inset-0 top-13 z-20 w-full h-[calc(100vh-3.25rem)] lg:static lg:top-0 lg:w-[50%] xl:w-[48%] lg:h-full lg:z-auto animate-in slide-in-from-right duration-300">
+            <div className="fixed inset-0 top-[52px] bottom-0 z-20 w-full lg:static lg:top-0 lg:w-[50%] xl:w-[48%] lg:h-full lg:z-auto animate-in slide-in-from-right duration-300">
               <CanvasArtifact
                 scene={activeScene}
                 allScenes={activeConversation?.scenes || []}
