@@ -253,9 +253,18 @@ async def get_available_models():
 
 @app.post("/api/conversations", response_model=ConversationSummary)
 async def create_new_conversation(data: ConversationCreate = ConversationCreate(), db: AsyncSession = Depends(get_db)):
+    valid_user_id = None
+    if data.user_id:
+        user_check = await db.get(User, data.user_id)
+        if not user_check:
+            guest_user = User(id=data.user_id, name="Guest", auth_provider="anonymous")
+            db.add(guest_user)
+            await db.commit()
+        valid_user_id = data.user_id
+
     conv = Conversation(
         title=data.title or "New Animation",
-        user_id=data.user_id
+        user_id=valid_user_id
     )
     db.add(conv)
     await db.commit()
@@ -352,6 +361,11 @@ async def send_message_and_generate(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     if data.user_id and not conv.user_id:
+        user_check = await db.get(User, data.user_id)
+        if not user_check:
+            guest_user = User(id=data.user_id, name="Guest", auth_provider="anonymous")
+            db.add(guest_user)
+            await db.commit()
         conv.user_id = data.user_id
 
     if conv.title in ["New Animation", ""] and len(data.content) > 0:

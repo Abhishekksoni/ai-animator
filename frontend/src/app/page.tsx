@@ -39,6 +39,7 @@ export default function App() {
 
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const wsRef = useRef<WebSocket | null>(null);
+  const convCacheRef = useRef<Record<string, ConversationDetail>>({});
 
   // Load user session, theme and preferences on mount
   useEffect(() => {
@@ -64,15 +65,11 @@ export default function App() {
     }
 
     async function init() {
-      const modelList = await fetchModels();
-      setModels(modelList);
-      if (modelList.length > 0) {
-        const savedModel = localStorage.getItem('manim_ai_model');
-        if (savedModel && modelList.some((m) => m.id === savedModel)) {
-          setSelectedModelId(savedModel);
-        } else {
-          setSelectedModelId(modelList[0].id);
-        }
+      try {
+        const modelList = await fetchModels();
+        setModels(modelList);
+      } catch (e) {
+        console.error('Failed to fetch models:', e);
       }
 
       const savedKeys = localStorage.getItem('manim_ai_keys');
@@ -144,6 +141,26 @@ export default function App() {
     setIsAuthModalOpen(true);
   };
 
+  // Re-sync active conversation state
+  const syncConversationState = (detail: ConversationDetail) => {
+    setActiveConversation(detail);
+    convCacheRef.current[detail.id] = detail;
+
+    if (detail.scenes && detail.scenes.length > 0) {
+      const successful = detail.scenes.filter((s) => s.status === 'succeeded' && s.video_url);
+      if (successful.length > 0) {
+        setSelectedSceneId(successful[successful.length - 1].id);
+        setIsArtifactOpen(true);
+      } else {
+        setSelectedSceneId(detail.scenes[detail.scenes.length - 1].id);
+      }
+    } else {
+      setSelectedSceneId(null);
+      setIsArtifactOpen(false);
+    }
+    setProgressEvent(null);
+  };
+
   // Subscribe to WebSocket for active conversation
   useEffect(() => {
     if (!activeConversation?.id) return;
@@ -170,23 +187,15 @@ export default function App() {
   }, [activeConversation?.id]);
 
   const loadConversation = async (id: string) => {
+    // 1. Instant Cache hit (0ms UI latency)
+    if (convCacheRef.current[id]) {
+      syncConversationState(convCacheRef.current[id]);
+    }
+
+    // 2. Fetch fresh background update
     try {
       const detail = await fetchConversation(id);
-      setActiveConversation(detail);
-      
-      if (detail.scenes && detail.scenes.length > 0) {
-        const successful = detail.scenes.filter((s) => s.status === 'succeeded' && s.video_url);
-        if (successful.length > 0) {
-          setSelectedSceneId(successful[successful.length - 1].id);
-          setIsArtifactOpen(true);
-        } else {
-          setSelectedSceneId(detail.scenes[detail.scenes.length - 1].id);
-        }
-      } else {
-        setSelectedSceneId(null);
-        setIsArtifactOpen(false);
-      }
-      setProgressEvent(null);
+      syncConversationState(detail);
     } catch (e) {
       console.error('Failed to load conversation:', e);
     }
@@ -194,11 +203,23 @@ export default function App() {
 
   const handleNewConversation = async () => {
     try {
+      // Create on backend
       const newConv = await createConversation('New Animation', user?.id);
-      const updatedList = await fetchConversations(user?.id);
-      setConversations(updatedList);
-      setIsArtifactOpen(false);
-      await loadConversation(newConv.id);
+      
+      // Optimistically update list without redundant extra fetch
+      setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== newConv.id)]);
+      
+      // Create empty conversation state instantly (0ms lag)
+      const freshDetail: ConversationDetail = {
+        id: newConv.id,
+        title: newConv.title,
+        created_at: newConv.created_at,
+        updated_at: newConv.updated_at,
+        messages: [],
+        scenes: []
+      };
+      
+      syncConversationState(freshDetail);
     } catch (e) {
       console.error('Failed to create new conversation:', e);
     }
@@ -207,12 +228,15 @@ export default function App() {
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      delete convCacheRef.current[id];
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      
       await deleteConversation(id);
-      const updatedList = await fetchConversations(user?.id);
-      setConversations(updatedList);
+      
       if (activeConversation?.id === id) {
-        if (updatedList.length > 0) {
-          loadConversation(updatedList[0].id);
+        const remaining = conversations.filter((c) => c.id !== id);
+        if (remaining.length > 0) {
+          loadConversation(remaining[0].id);
         } else {
           handleNewConversation();
         }

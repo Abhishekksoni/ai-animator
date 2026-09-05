@@ -85,6 +85,36 @@ export const CanvasArtifact: React.FC<CanvasArtifactProps> = ({
     }
   };
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadVideo = async () => {
+    if (!videoUrl) return;
+    try {
+      setIsDownloading(true);
+      const res = await fetch(videoUrl);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `manim_v${scene?.version || 1}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download error, falling back:', err);
+      const a = document.createElement('a');
+      a.href = videoUrl;
+      a.download = `manim_v${scene?.version || 1}.mp4`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code);
     setCopied(true);
@@ -170,20 +200,19 @@ export const CanvasArtifact: React.FC<CanvasArtifactProps> = ({
             </button>
           ) : (
             videoUrl && (
-              <a
-                href={videoUrl}
-                download={`manim_v${scene?.version || 1}.mp4`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={handleDownloadVideo}
+                disabled={isDownloading}
+                title="Download MP4 video"
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
                   isDark
                     ? 'border-[#2e2e33] bg-[#1d1d21] text-zinc-300 hover:bg-[#28282d] hover:text-white'
                     : 'border-[#dcd9ce] bg-white text-stone-700 hover:bg-[#f5f4ef] hover:text-stone-950 shadow-xs'
                 }`}
               >
-                <Download className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">MP4</span>
-              </a>
+                <Download className={`h-3.5 w-3.5 ${isDownloading ? 'animate-bounce text-[#d97736]' : ''}`} />
+                <span className="hidden sm:inline">{isDownloading ? 'Downloading...' : 'MP4'}</span>
+              </button>
             )
           )}
 

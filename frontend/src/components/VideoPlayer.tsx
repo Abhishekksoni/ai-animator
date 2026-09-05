@@ -95,6 +95,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadVideo = async () => {
+    if (!videoUrl) return;
+    try {
+      setIsDownloading(true);
+      const res = await fetch(videoUrl);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `manim_scene_v${scene?.version || 1}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download error, falling back:', err);
+      const a = document.createElement('a');
+      a.href = videoUrl;
+      a.download = `manim_scene_v${scene?.version || 1}.mp4`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-950 rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl">
       {/* Version History Selector Ribbon */}
@@ -104,25 +134,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Layers className="h-3.5 w-3.5 text-cyan-400" />
             <span className="font-semibold text-slate-300">Versions:</span>
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 custom-scrollbar">
-            {allScenes.map((s, index) => {
+          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
+            {allScenes.map((s, idx) => {
               const isSelected = s.id === scene?.id;
               const hasVideo = Boolean(s.video_url);
               return (
                 <button
                   key={s.id}
                   onClick={() => onSelectScene(s.id)}
-                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono transition ${
                     isSelected
                       ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      : 'bg-slate-800/90 text-slate-400 hover:bg-slate-700/80 hover:text-slate-200'
                   }`}
                 >
-                  <span>v{s.version || index + 1}</span>
+                  <span>v{s.version || idx + 1}</span>
                   {hasVideo ? (
                     <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-slate-950' : 'bg-emerald-400'}`} />
                   ) : (
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
                   )}
                 </button>
               );
@@ -132,7 +162,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       {/* Main Video Viewport */}
-      <div className="relative flex-1 bg-black/90 flex items-center justify-center overflow-hidden min-h-[280px]">
+      <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-black/60 backdrop-blur-xs">
         {videoUrl ? (
           <video
             ref={videoRef}
@@ -140,7 +170,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             loop={isLooping}
             muted={isMuted}
             playsInline
-            controls={false}
             onTimeUpdate={handleTimeUpdate}
             onEnded={() => setIsPlaying(false)}
             onClick={togglePlay}
@@ -226,16 +255,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 {scene?.render_duration_ms ? `${(scene.render_duration_ms / 1000).toFixed(1)}s render` : 'Rendered'}
               </span>
 
-              <a
-                href={videoUrl}
-                download={`manim_scene_v${scene?.version || 1}.mp4`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex h-8 items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition"
+              <button
+                onClick={handleDownloadVideo}
+                disabled={isDownloading}
+                title="Download MP4 video"
+                className="flex h-8 items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition disabled:opacity-50"
               >
-                <Download className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">MP4</span>
-              </a>
+                <Download className={`h-3.5 w-3.5 ${isDownloading ? 'animate-bounce text-cyan-400' : ''}`} />
+                <span className="hidden sm:inline">{isDownloading ? 'Downloading...' : 'MP4'}</span>
+              </button>
 
               <button
                 onClick={handleFullscreen}
